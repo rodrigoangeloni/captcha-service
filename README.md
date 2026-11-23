@@ -1,5 +1,18 @@
 # captcha-service
 
+<p align="center">
+  <a href="https://skillicons.dev">
+    <img src="https://skillicons.dev/icons?i=nodejs,express,docker,nginx,redis,vercel"
+         alt="Node.js · Express · Docker · Nginx · Redis · Vercel" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-green?style=flat-square" alt="Licencia MIT" /></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 18 o superior" />
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/versi%C3%B3n-1.2.0-blue?style=flat-square" alt="Versión 1.2.0" /></a>
+</p>
+
 Servicio de CAPTCHA de imagen **independiente** y autoalojado (serverless-ready),
 para usar en varios sitios web desde una sola API. Genera imágenes con texto
 distorsionado y valida las respuestas mediante tokens cifrados, sin depender
@@ -49,7 +62,7 @@ incorrecto, manipulado, sitio distinto y replay). El test descifra el token
 localmente, así que debe ejecutarse con el **mismo `CAPTCHA_SECRET`** que el
 servidor. `BASE_URL` permite apuntar a otro host/puerto.
 
-## Ejecutar en local
+## 🚀 Ejecutar en local
 
 ```bash
 npm install
@@ -60,7 +73,7 @@ Abre http://localhost:3000 — verás una demo con el formulario.
 
 Para desarrollo con recarga: `npm run dev`.
 
-## Integrarlo en tus sitios (lo fácil)
+## 🧩 Integrarlo en tus sitios (lo fácil)
 
 Añade el widget:
 
@@ -110,7 +123,7 @@ if (!valid) return res.status(400).send('CAPTCHA incorrecto');
 También se puede validar desde el navegador con `POST /api/verify`, pero la
 decisión final debe tomarla tu servidor.
 
-## Desplegar gratis (serverless)
+## ☁️ Desplegar gratis (serverless o Docker)
 
 ### Opción A — Vercel (recomendado, 100% gratis)
 
@@ -161,7 +174,7 @@ npm install
 CAPTCHA_SECRET=... npm start
 ```
 
-## Configuración
+## ⚙️ Configuración
 
 Copia `.env.example` a `.env` y ajusta:
 
@@ -196,7 +209,7 @@ Copia `.env.example` a `.env` y ajusta:
 | `api/*.js` | Funciones serverless para Vercel |
 | `test-service.js` | Prueba de humo con aserciones (`npm test`) |
 
-## Seguridad y límites
+## 🔒 Seguridad y límites
 
 - Los tokens expiran (90 s por defecto) y la comparación es de tiempo constante.
 - El token es cifrado, así que la respuesta no viaja en claro.
@@ -219,4 +232,4 @@ Copia `.env.example` a `.env` y ajusta:
 
 ## Licencia
 
-MIT. Código propio, libre para usar y modificar.
+[MIT](LICENSE). Código propio, libre para usar y modificar.

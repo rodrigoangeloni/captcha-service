@@ -232,6 +232,16 @@ Copia `.env.example` a `.env` y ajusta:
 - Accesibilidad: el captcha es solo visual. Ofrece una alternativa (p. ej.
   ALTCHA o un canal de contacto) si necesitas cumplir requisitos de accesibilidad.
 
+## Contribuir
+
+Las issues y pull requests son bienvenidas. Para cambios grandes, abre primero
+una issue para acordar el enfoque. Antes de enviar un PR, levanta el servidor
+y ejecuta `npm test`.
+
+## Changelog
+
+Los cambios de cada versión están documentados en [CHANGELOG.md](CHANGELOG.md).
+
 ## Licencia
 
 [MIT](LICENSE) © 2026 [Rodrigo Angeloni](https://github.com/rodrigoangeloni).

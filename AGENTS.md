@@ -25,7 +25,8 @@ Stateless image-CAPTCHA service: Node.js + Express, CommonJS, single dependency 
 - `store.js` — optional one-time-use (anti-replay) + per-token attempt counter via Upstash Redis REST (plain `fetch`, no SDK). Auto-enabled by env vars; fail-open on Redis errors (logged).
 - `ratelimit.js` — in-memory fixed-window limiter per IP+route; per-instance in serverless. IP comes from first `X-Forwarded-For` entry.
 - `handlers.js` — endpoint logic shared by local Express and serverless. Uses only raw `req`/`res` (`statusCode`, `setHeader`, `end`). Do NOT use Express-only APIs (`res.json`, `res.status`, middleware) here. `verify` is async and catches its own errors (Express 4 won't catch rejections).
-- `server.js` — Express wrapper + demo page; mounts handlers via `app.all`. Demo uses site `demo` and applies honeypot (`website_url`) + time-trap (`form_ts`, <2s rejects).
+- `server.js` — Express wrapper + demo page; mounts handlers via `app.all`. Demo uses site `demo` and applies honeypot (`website_url`) + time-trap (`form_ts`, <2s rejects). `GET /health` (no rate limit) is the Docker HEALTHCHECK target.
+- `Dockerfile` / `docker-compose.yml` — container deploy for a own server behind Nginx Proxy Manager; compose expects an external NPM network and a host `.env` with `CAPTCHA_SECRET` (fail-fast via `${VAR:?}`). `api/` is Vercel-only and excluded from the image.
 - `api/{challenge,image,verify}.js` — thin Vercel function wrappers. Keep them one-line delegations; endpoint changes belong in `handlers.js`.
 - `public/widget.js` — embeddable script for consumer sites; plain browser JS (no bundler), auto-detects service URL from its own `src`, auto-inits via `data-target`. Injects captcha inputs plus honeypot (`website_url`) and timestamp (`captcha_ts`) fields — consumer backends are expected to check them (documented in README).
 

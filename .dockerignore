@@ -1,0 +1,13 @@
+node_modules
+.git
+.env
+.env.*
+!.env.example
+.playwright-mcp
+*.png
+README.md
+AGENTS.md
+test-service.js
+api
+Dockerfile
+docker-compose.yml

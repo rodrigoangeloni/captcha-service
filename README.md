@@ -133,7 +133,27 @@ El código usa `node:crypto`; habilita `nodejs_compat` en `wrangler.toml`.
 Alternativamente reescribe `captcha.js` con la API WebCrypto (`crypto.subtle`)
 y AES-GCM, que es nativa del Worker.
 
-### Opción D — Servidor propio (Node)
+### Opción D — Docker en servidor propio (p. ej. Debian + Nginx Proxy Manager)
+
+```bash
+cp .env.example .env   # define CAPTCHA_SECRET: openssl rand -hex 32
+docker network ls      # localiza la red de NPM y ajusta `name:` en docker-compose.yml
+docker compose up -d --build
+```
+
+En Nginx Proxy Manager: **Proxy Host** → dominio `captcha.tudominio.com`,
+scheme `http`, forward hostname `captcha` (nombre del contenedor), puerto `3000`,
+SSL Let's Encrypt + Force SSL. No hace falta publicar puertos: NPM llega al
+contenedor por la red Docker compartida. NPM envía `X-Forwarded-For`, así que
+el rate limiting ve la IP real del cliente.
+
+El contenedor incluye `HEALTHCHECK` contra `GET /health`. Comprueba el estado
+con `docker ps` (columna STATUS) o `docker inspect captcha`.
+
+Sin NPM/red compartida: descomenta `ports` en `docker-compose.yml` y apunta
+el proxy a la IP del host.
+
+### Opción E — Servidor propio (Node directo)
 
 ```bash
 npm install

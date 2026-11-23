@@ -1,0 +1,38 @@
+# Despliegue con Docker + Nginx Proxy Manager (NPM).
+#
+# 1. Crea un .env junto a este archivo (copia .env.example) y define al menos
+#    CAPTCHA_SECRET (obligatorio: NODE_ENV=production). Genera uno con:
+#      openssl rand -hex 32
+# 2. Averigua la red Docker de NPM:  docker network ls
+#    y ajusta `name:` abajo (suele ser npm_default o nginx-proxy-manager_default).
+# 3. docker compose up -d --build
+# 4. En NPM: Proxy Host -> captcha.tudominio.com -> http / captcha / 3000,
+#    con SSL Let's Encrypt. No hace falta publicar puertos.
+#
+# Alternativa sin red compartida: comenta `networks`, descomenta `ports`
+# y en NPM apunta a la IP del host Docker (p. ej. 172.17.0.1:3000).
+
+services:
+  captcha:
+    build: .
+    container_name: captcha
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      CAPTCHA_SECRET: ${CAPTCHA_SECRET:?define CAPTCHA_SECRET en el .env}
+      CAPTCHA_SITES: ${CAPTCHA_SITES:-}
+      CAPTCHA_ORIGIN: ${CAPTCHA_ORIGIN:-*}
+      CAPTCHA_TTL: ${CAPTCHA_TTL:-90000}
+      CAPTCHA_MAX_ATTEMPTS: ${CAPTCHA_MAX_ATTEMPTS:-5}
+      CAPTCHA_RPM: ${CAPTCHA_RPM:-30}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
+    networks:
+      - proxy
+    # ports:
+    #   - "3000:3000"
+
+networks:
+  proxy:
+    external: true
+    name: npm_default # <-- ajusta al nombre real de la red de NPM

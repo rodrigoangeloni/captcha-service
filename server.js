@@ -128,6 +128,11 @@ app.get('/', (req, res) => {
   res.send(renderPage());
 });
 
+// Healthcheck para Docker/orquestadores (no pasa por rate limiting).
+app.get('/health', (req, res) => {
+  res.json({ ok: true });
+});
+
 app.listen(PORT, () => {
   console.log(`Servicio de CAPTCHA corriendo en http://localhost:${PORT}`);
 });

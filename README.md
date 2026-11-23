@@ -12,12 +12,17 @@ El token es **autocontenido y cifrado con AES-256-GCM**:
 token = base64url(iv) . base64url(cifrado) . base64url(tag)
 ```
 
-Dentro del cifrado va la respuesta, el sitio y la expiración. Por eso:
+Dentro del cifrado va la respuesta, el sitio, la expiración y un identificador
+único (`jti`). Por eso:
 
 - **No hay base de datos ni sesión** → funciona en cualquier función serverless.
 - Cualquier instancia puede validar un token creado por otra.
 - El usuario no puede leer la respuesta decodificando el token.
 - Tamper-proof: si se modifica el token, GCM falla y se rechaza.
+- La imagen dibuja los caracteres como trazos `<path>` (nunca `<text>`):
+  la respuesta no puede extraerse leyendo el markup del SVG.
+- **Anti-replay opcional:** conectando un Redis gratuito (Upstash) cada token
+  se consume al primer verify correcto y se limitan los intentos por token.
 
 ## Endpoints
 
@@ -28,6 +33,20 @@ Dentro del cifrado va la respuesta, el sitio y la expiración. Por eso:
 | `POST` | `/api/verify` | Valida `{ token, answer, site }` → `{ valid }` |
 
 Todas las respuestas incluyen CORS (`Access-Control-Allow-Origin` configurable) y `Cache-Control: no-store`.
+Hay rate limiting por IP y ruta (`CAPTCHA_RPM`, por defecto 30/min → `429` con `Retry-After`).
+
+## Probar
+
+Con el servidor corriendo:
+
+```bash
+npm test
+```
+
+Es una prueba de humo con aserciones (challenge → imagen → verify correcto,
+incorrecto, manipulado, sitio distinto y replay). El test descifra el token
+localmente, así que debe ejecutarse con el **mismo `CAPTCHA_SECRET`** que el
+servidor. `BASE_URL` permite apuntar a otro host/puerto.
 
 ## Ejecutar en local
 
@@ -62,11 +81,19 @@ El widget inserta automáticamente:
 - `<img>` con la imagen del captcha
 - `<input name="captcha">` donde el usuario escribe
 - `<input type="hidden" name="captcha_token">` con el token
+- `<input name="website_url">` honeypot: invisible para personas, los bots lo rellenan
+- `<input type="hidden" name="captcha_ts">` marca de tiempo de carga del captcha
 
 ### Validar en el backend de tu sitio (recomendado)
 
 ```js
-const res = await fetch('https://TU-SERVICIO/api/verify', {
+// 1. Filtros anti-bots baratos (honeypot + trampa de tiempo)
+const ts = Number(req.body.captcha_ts);
+if (String(req.body.website_url || '').trim()) return res.status(400).send('Bot');
+if (!Number.isFinite(ts) || Date.now() - ts < 2000) return res.status(400).send('Bot');
+
+// 2. CAPTCHA
+const res2 = await fetch('https://TU-SERVICIO/api/verify', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -75,7 +102,7 @@ const res = await fetch('https://TU-SERVICIO/api/verify', {
     site: 'mi-sitio'
   })
 });
-const { valid } = await res.json();
+const { valid } = await res2.json();
 if (!valid) return res.status(400).send('CAPTCHA incorrecto');
 ```
 
@@ -117,11 +144,18 @@ CAPTCHA_SECRET=... npm start
 
 Copia `.env.example` a `.env` y ajusta:
 
-- `CAPTCHA_SECRET`: **obligatorio en producción**. Si no se define, se usa un
-  secreto de desarrollo inseguro.
+- `CAPTCHA_SECRET`: **obligatorio en producción** (`NODE_ENV=production`):
+  sin secreto propio el servicio no arranca. En desarrollo se usa un secreto
+  inseguro si no se define.
 - `CAPTCHA_SITES`: lista de sitios autorizados (evita que cualquiera use tu servicio).
-- `CAPTCHA_TTL`: vigencia en ms (por defecto 2 min).
+- `CAPTCHA_TTL`: vigencia en ms (por defecto 90 s).
 - `CAPTCHA_ORIGIN`: origen CORS permitido.
+- `CAPTCHA_MAX_ATTEMPTS`: intentos máximos de verify por token (defecto 5, requiere Upstash).
+- `CAPTCHA_RPM`: peticiones por minuto por IP y ruta (defecto 30).
+- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`: activan el modo
+  anti-replay (un solo uso) y el límite de intentos. Crea una base Redis
+  gratis en [upstash.com](https://upstash.com) y copia sus credenciales REST.
+  Sin ellas el servicio sigue funcionando sin estado.
 
 > Nota: este proyecto no carga `.env` automáticamente. En local exporta las
 > variables o usa `node --env-file=.env server.js` (Node 20+). En Vercel/Netlify
@@ -132,20 +166,35 @@ Copia `.env.example` a `.env` y ajusta:
 | Archivo | Función |
 |---|---|
 | `captcha.js` | Núcleo sin estado: cifrado de token, SVG, validación |
+| `glyphs.js` | Fuente de trazos propia (glifos como paths, sin dependencias) |
+| `store.js` | Anti-replay y contador de intentos vía Upstash Redis REST (opcional) |
+| `ratelimit.js` | Rate limiting en memoria por IP y ruta |
 | `handlers.js` | Endpoints compartidos (Express + serverless) |
-| `server.js` | Servidor Express local + demo |
+| `server.js` | Servidor Express local + demo (con honeypot y trampa de tiempo) |
 | `public/widget.js` | Script embebible para tus sitios |
 | `api/*.js` | Funciones serverless para Vercel |
+| `test-service.js` | Prueba de humo con aserciones (`npm test`) |
 
 ## Seguridad y límites
 
-- Los tokens expiran y la comparación es de tiempo constante.
+- Los tokens expiran (90 s por defecto) y la comparación es de tiempo constante.
 - El token es cifrado, así que la respuesta no viaja en claro.
-- **Replay:** al ser sin estado, un token resuelto puede reutilizarse durante su
-  vigencia. Para producción estricta añade un KV/Redis con el `jti` usado y
-  bórralo al validar (en Cloudflare KV o Redis gratis de Upstash).
-- Añade rate limiting por IP/sitio en tu proxy o CDN.
+- La respuesta y el ruido se generan con `crypto.randomInt` (no `Math.random`).
+- La imagen usa trazos `<path>`, no `<text>`: no se puede leer la respuesta
+  del markup. Aun así, un OCR/ML determinado puede resolver captchas de
+  texto; para mayor seguridad combina con honeypot, trampa de tiempo y
+  rate limiting, o usa un captcha de proof-of-work como
+  [ALTCHA](https://altcha.org) (open source, autoalojable).
+- **Replay:** con Upstash configurado, cada token se consume al primer verify
+  correcto (`SET NX`) y se rechaza tras `CAPTCHA_MAX_ATTEMPTS` intentos.
+  Sin Upstash, un token resuelto puede reutilizarse durante su vigencia.
+  Si Redis se cae, el servicio sigue funcionando (fail-open) y lo registra.
+- Rate limiting por IP/ruta incluido (`429`); en serverless es por instancia:
+  añade también rate limiting global en tu proxy o CDN.
+- El sitio del token debe coincidir exactamente con el del verify.
 - Usa siempre HTTPS y un `CAPTCHA_SECRET` largo y aleatorio.
+- Accesibilidad: el captcha es solo visual. Ofrece una alternativa (p. ej.
+  ALTCHA o un canal de contacto) si necesitas cumplir requisitos de accesibilidad.
 
 ## Licencia
 

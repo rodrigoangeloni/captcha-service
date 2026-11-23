@@ -11,6 +11,11 @@
  *   <img> imagen del captcha
  *   <input name="captcha"> texto que escribe el usuario
  *   <input type="hidden" name="captcha_token"> token para validar
+ *   <input name="website_url"> honeypot (oculto; los bots lo rellenan)
+ *   <input type="hidden" name="captcha_ts"> marca de tiempo de carga
+ *
+ * En el backend de tu sitio, rechaza si el honeypot viene relleno o si
+ * pasaron menos de ~2 segundos desde captcha_ts (envío demasiado rápido).
  */
 (function (global) {
   'use strict';
@@ -32,6 +37,8 @@
     var site = options.site || '';
     var tokenName = options.tokenName || 'captcha_token';
     var inputName = options.inputName || 'captcha';
+    var hpName = options.hpName || 'website_url';
+    var tsName = options.tsName || 'captcha_ts';
 
     var container = typeof options.container === 'string'
       ? document.getElementById(options.container)
@@ -40,7 +47,7 @@
     if (!container) throw new Error('Contenedor de CAPTCHA no encontrado');
 
     var img = document.createElement('img');
-    img.alt = 'captcha';
+    img.alt = 'CAPTCHA: escriba los caracteres de la imagen';
     img.width = 150;
     img.height = 50;
     img.style.border = '1px solid #c7ced7';
@@ -55,6 +62,7 @@
     input.setAttribute('autocapitalize', 'off');
     input.setAttribute('autocorrect', 'off');
     input.required = true;
+    input.setAttribute('aria-label', 'Texto del CAPTCHA');
     input.style.display = 'block';
     input.style.marginBottom = '6px';
     input.style.padding = '6px';
@@ -63,6 +71,26 @@
     token.type = 'hidden';
     token.name = tokenName;
     token.value = '';
+
+    // Honeypot: fuera de pantalla y fuera del orden de tabulación.
+    // Una persona nunca lo ve ni lo rellena; muchos bots sí.
+    var hp = document.createElement('input');
+    hp.type = 'text';
+    hp.name = hpName;
+    hp.tabIndex = -1;
+    hp.autocomplete = 'off';
+    hp.setAttribute('aria-hidden', 'true');
+    hp.style.position = 'absolute';
+    hp.style.left = '-9999px';
+    hp.style.width = '1px';
+    hp.style.height = '1px';
+    hp.style.opacity = '0';
+
+    // Marca de tiempo: el backend rechaza envíos en menos de ~2 segundos.
+    var ts = document.createElement('input');
+    ts.type = 'hidden';
+    ts.name = tsName;
+    ts.value = String(Date.now());
 
     var refresh = document.createElement('button');
     refresh.type = 'button';
@@ -77,6 +105,8 @@
     container.appendChild(img);
     container.appendChild(input);
     container.appendChild(token);
+    container.appendChild(hp);
+    container.appendChild(ts);
     container.appendChild(refresh);
 
     function load() {
@@ -88,6 +118,7 @@
           if (!data || !data.token) throw new Error('Respuesta inválida del servicio');
           img.src = new URL(data.url, base + '/').href + '&t=' + Date.now();
           token.value = data.token;
+          ts.value = String(Date.now());
           input.value = '';
           return data;
         })
@@ -123,6 +154,8 @@
         site: script.getAttribute('data-site') || '',
         tokenName: script.getAttribute('data-token-name') || 'captcha_token',
         inputName: script.getAttribute('data-input-name') || 'captcha',
+        hpName: script.getAttribute('data-hp-name') || 'website_url',
+        tsName: script.getAttribute('data-ts-name') || 'captcha_ts',
         serviceUrl: script.getAttribute('data-service') || autoService
       });
     });

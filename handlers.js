@@ -1,9 +1,21 @@
 'use strict';
 
 const captcha = require('./captcha');
+const ratelimit = require('./ratelimit');
 
 // Handlers compartidos por Express (local) y por las funciones serverless.
 // Usan solo req/res crudos para funcionar en ambos entornos.
+
+const RPM = Number(process.env.CAPTCHA_RPM || 30);
+
+// Rate limit por IP y ruta. Devuelve true si la petición debe rechazarse.
+function limited(req, res, route) {
+  const { ok, retryAfter } = ratelimit.take(`${route}:${ratelimit.clientIp(req)}`, RPM);
+  if (ok) return false;
+  res.setHeader('Retry-After', retryAfter);
+  json(res, 429, { error: 'Demasiadas solicitudes, espera un momento' });
+  return true;
+}
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', process.env.CAPTCHA_ORIGIN || '*');
@@ -53,6 +65,7 @@ function query(req, name) {
 
 function challenge(req, res) {
   if (req.method === 'OPTIONS') return preflight(res);
+  if (limited(req, res, 'challenge')) return;
 
   const site = String(query(req, 'site') || '');
   if (!isSiteAllowed(site)) {
@@ -71,6 +84,7 @@ function challenge(req, res) {
 
 function image(req, res) {
   if (req.method === 'OPTIONS') return preflight(res);
+  if (limited(req, res, 'image')) return;
 
   const token = String(query(req, 'token') || '');
   const svg = captcha.imageFor(token);
@@ -85,8 +99,9 @@ function image(req, res) {
   res.end(svg);
 }
 
-function verify(req, res) {
+async function verify(req, res) {
   if (req.method === 'OPTIONS') return preflight(res);
+  if (limited(req, res, 'verify')) return;
 
   const body = req.body || {};
   const token = String(body.token || body.captcha_key || '');
@@ -97,8 +112,13 @@ function verify(req, res) {
     return json(res, 403, { error: 'Sitio no autorizado' });
   }
 
-  const valid = captcha.validate(token, answer, site);
-  return json(res, 200, { valid });
+  try {
+    const valid = await captcha.validate(token, answer, site);
+    return json(res, 200, { valid });
+  } catch (err) {
+    console.error('[captcha] error inesperado en verify:', err);
+    return json(res, 500, { error: 'Error interno' });
+  }
 }
 
 module.exports = { challenge, image, verify, preflight };

@@ -37,6 +37,9 @@ function renderPage({ message, ok } = {}) {
     ${notice}
 
     <form action="/demo/verify" method="post" id="login-form">
+      <input type="text" name="website_url" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <input type="hidden" name="form_ts" value="${Date.now()}">
+
       <label for="documento">N&deg; Documento</label>
       <input id="documento" name="documento" type="text" autocomplete="off" required>
 
@@ -89,8 +92,19 @@ function renderPage({ message, ok } = {}) {
 </html>`;
 }
 
-// Demo: el "backend del otro sitio" llama a /api/verify
+// Demo: el "backend del otro sitio" llama a /api/verify.
+// Además aplica honeypot + trampa de tiempo (defensa en capas barata).
 app.post('/demo/verify', async (req, res) => {
+  const honeypot = String(req.body.website_url || '').trim();
+  const ts = Number(req.body.form_ts);
+  const tooFast = !Number.isFinite(ts) || Date.now() - ts < 2000;
+
+  if (honeypot || tooFast) {
+    return res.status(400).send(renderPage({
+      message: 'Solicitud rechazada por los filtros anti-bots.'
+    }));
+  }
+
   const verifyRes = await fetch(`${req.protocol}://${req.get('host')}/api/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

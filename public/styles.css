@@ -149,3 +149,12 @@ input:focus {
 .api-note code {
   word-break: break-all;
 }
+
+/* Honeypot: visible para los bots, fuera de pantalla para las personas. */
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}

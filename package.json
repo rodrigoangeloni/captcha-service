@@ -15,6 +15,7 @@
     "express": "^4.21.2"
   },
   "license": "MIT",
+  "author": "Rodrigo Angeloni",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rodrigoangeloni/captcha-service.git"

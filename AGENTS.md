@@ -2,6 +2,8 @@
 
 Stateless image-CAPTCHA service: Node.js + Express, CommonJS, single dependency (`express`). No build step, no lint/typecheck config, no test framework. Comments, UI text, and README are Spanish — keep new code/docs consistent.
 
+Releases: SemVer in `package.json` + `CHANGELOG.md` (Keep a Changelog format, Spanish). User-facing changes get a changelog entry and a version bump in the same commit.
+
 ## Commands & environment
 
 - Run: `npm start`; dev with reload: `npm run dev` (`node --watch server.js`). Demo at http://localhost:3000.

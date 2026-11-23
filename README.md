@@ -1,8 +1,9 @@
-# Servicio de CAPTCHA (serverless-ready)
+# captcha-service
 
-Servicio de CAPTCHA de imagen **independiente**, para usar en varios sitios web
-desde una sola API. Genera imágenes con texto distorsionado y valida las
-respuestas mediante tokens cifrados, sin depender de proveedores externos.
+Servicio de CAPTCHA de imagen **independiente** y autoalojado (serverless-ready),
+para usar en varios sitios web desde una sola API. Genera imágenes con texto
+distorsionado y valida las respuestas mediante tokens cifrados, sin depender
+de proveedores externos.
 
 ## Idea clave
 

@@ -18,6 +18,8 @@ para usar en varios sitios web desde una sola API. Genera imágenes con texto
 distorsionado y valida las respuestas mediante tokens cifrados, sin depender
 de proveedores externos.
 
+> Proyecto creado y mantenido por [Rodrigo Angeloni](https://github.com/rodrigoangeloni).
+
 ## Idea clave
 
 El token es **autocontenido y cifrado con AES-256-GCM**:
@@ -232,4 +234,5 @@ Copia `.env.example` a `.env` y ajusta:
 
 ## Licencia
 
-[MIT](LICENSE). Código propio, libre para usar y modificar.
+[MIT](LICENSE) © 2026 [Rodrigo Angeloni](https://github.com/rodrigoangeloni).
+Código propio, libre para usar y modificar.
